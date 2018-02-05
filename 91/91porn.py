@@ -67,6 +67,7 @@ def getPageNumber():
 
 
 # 抓取页面
+
 def listUrl():
     pages = getPageNumber()
     page_count = int(pages)
@@ -86,6 +87,7 @@ def listUrl():
                     print("抓取页面失败")
             currentPage = size + currentPage
             downLoadBatch()
+        downLoadBatch(-1)
 
 
 def getUrlContent(html):
@@ -155,16 +157,16 @@ def downLoad(link):
 
 
 # 递归下载
-def downLoadBatch():
+def downLoadBatch(flag=0):
     connection = sqlite3.connect("test91.db")
-    cursor = connection.execute("SELECT count(1) FROM url WHERE flag=0")
+    cursor = connection.execute("SELECT count(1) FROM url WHERE flag={0}".format(flag))
     urlList = []
     if (cursor):
         for i in cursor:
             totalCount = i[0]
         print("本次还有{0}条未下载".format(totalCount))
         if (totalCount > 0):
-            cursor = connection.execute("SELECT videoUrl FROM url WHERE flag=0 ")
+            cursor = connection.execute("SELECT videoUrl FROM url WHERE flag={0}".format(flag))
             for str in cursor:
                 urlList.append(str[0])
             connection.close()
