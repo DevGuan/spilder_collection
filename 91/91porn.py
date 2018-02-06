@@ -173,7 +173,7 @@ def downLoadBatch(flag=0):
         if (len(urlList) > 0):
             for str in urlList:
                 downLoad(str)
-            downLoadBatch()
+            downLoadBatch(flag)
 
 
 if __name__ == '__main__':
