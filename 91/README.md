@@ -8,4 +8,6 @@ bs4,requests,lxml
 <br/>
 pip install -r requirements.txt
 <br/><br/><br/>
-然后执行python 91porn.py
+然后执行python 91porn.py 下载视频
+<br/>
+python 91photo.py 下载图片
