@@ -3,7 +3,8 @@ import re, os, queue, time
 from bs4 import BeautifulSoup
 import requests
 from threading import Thread
-
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 BBS__URL = 'http://93.t9p.today/{0}'
 BASE_URL = 'http://93.t9p.today/forumdisplay.php?fid={0}'
 URL_LIST = [19,21]
@@ -15,10 +16,19 @@ BASE_PATH = None
 
 
 def request(url, stream=False):
-    response = requests.get(url, stream=stream)
-    response.encoding = response.apparent_encoding
-    if (response.status_code == 200):
-        return response
+    try:
+        s = requests.Session()
+        retries = Retry(total=5,
+                        backoff_factor=10,
+                        status_forcelist=[500, 502, 503, 504])
+        s.mount('http://', HTTPAdapter(max_retries=retries))
+        response = s.get(url, stream=stream)
+        response.encoding = response.apparent_encoding
+        if (response.status_code == 200):
+            return response
+    except Exception as e:
+        print("http 请求失败{0},睡眠一会会", e)
+        time.sleep(10)
     return None
 
 
@@ -45,7 +55,8 @@ class Worker(Thread):
     def work(self, content):
         if content:
             bbsurl = BBS__URL.format(content.url)
-            response = requests.get(bbsurl)
+            print("开始获取帖子总回复数{0}".format(bbsurl))
+            response = request(bbsurl)
             if (response):
                 try:
                     bs = BeautifulSoup(response.content, PARSER)
@@ -60,7 +71,7 @@ class Worker(Thread):
                     print("抓取失败{0},reason={1}".format(content.url, e))
 
     def parseBbsPage(self, url, path):
-        response = requests.get(url)
+        response = request(url)
         if (response):
             bs = BeautifulSoup(response.content, PARSER)
             for post in bs.select("#postlist"):
@@ -78,8 +89,10 @@ class Worker(Thread):
         if os.path.isfile(targer_file):
             print("文件已存在,本次不下载")
             return
-        with open(targer_file, 'wb') as f:
-            f.write(requests.get(url).content)
+        response=request(url)
+        if response:
+            with open(targer_file, 'wb') as f:
+                f.write(response.content)
 
     def getPage(self, bs):
         pageNum = 1
@@ -104,12 +117,12 @@ def validateAnymouns(url):
 
 
 def parsePages(url):
-    response = requests.get(url)
+    response = request(url)
     if (response):
         bs = BeautifulSoup(response.content, PARSER)
         addUrlToQueue(url)
         pageNum=getPage(bs)
-        print("开始解析帖子列表当前板块id={0},总页数{1}".format(url, pageNum))
+        print("MAIN=》开始解析帖子列表当前板块id={0},总页数{1}".format(url, pageNum))
         if (pageNum > 2):
             for i in range(2, pageNum):
                 addUrlToQueue(url + '&page=' + str(i))
@@ -128,7 +141,7 @@ def getPage(bs):
 
 
 def addUrlToQueue(url):
-    response = requests.get(url)
+    response = request(url)
     if (response):
         bs = BeautifulSoup(response.content, PARSER)
         content_list = bs.find_all(id=r)
